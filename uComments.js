@@ -1,79 +1,90 @@
 
-(function(){
+/*!
+    uComments v0.1 release
+    (c) 2016 Korchevskiy Evgeniy (aka ReSLeaR-)
+    ---
+    vk.com/reslear | upost.su | github.com/reslear
+    Released under the MIT @license.
+!*/
 
-    window.Comments = function(user_options) {
+/*
 
-        var options = Gu.extend({
-            module: 'stuff',
-            container: '#comments',
-            switches: '#comment-switches',
-            button: '#comment-button',
-            button_update: '#comment-button_update',
-            message: '#comment-message',
-            id: 0,
-            insert: 'beforeend'
-        }, user_options);
+var comments = new uComments('stuff');
+comments.get('/stuff/45?comments', function( nodes ) {
 
-        this.options = options;
-        this.object = false;
+});
+
+---
+только после get:
+
+    comments.add(entry_id, message, pid);
+    comments.edit(com_id, message);
+    comments.remove(com_id);
+
+comments.update();
 
 
-        this.container = options.container ? document.querySelector(options.container) : false;
-        this.switches = options.switches ? document.querySelector(options.switches) : false;
-        this.button = options.button ? document.querySelector(options.button) : false;
-        this.button_update = options.button_update ? document.querySelector(options.button_update) : false;
-        this.message = options.message ? document.querySelector(options.message) : false;
+nodes = [
+    {node: node, id: 7, level: 2}
+]
 
-        this.answer_pid = document.getElementById('comm-answer-pid');
-        this.answer_container = document.getElementById('comm-answer-container');
+*/
+
+(function() {
+
+    'use strict';
+
+    window.uComments = function(module) {
+
+        this.module = module || 'stuff';
+
+        this.nodes  = [];
+        this.ssid   = 0;
+        this.sos    = 0;
+        this.url    = null;
     };
 
-    Comments.prototype.init = function(url) {
 
-        this.load(url || location.origin + location.pathname);
-        allEvents.bindBodyClick.call(this);
-    };
+    /* public
+    ---------------------------------------------------------------------------------- */
 
-    Comments.prototype.load = function(url, isPrepend) {
+
+    // get
+    uComments.prototype.get = function(url, cb) {
+
+        this.url = url;
+
+        xhrAsync([url], function(text) {
+
+            var result = comments.parseAll(text);
+            cb.call(this, result);
+        });
+    }
+
+
+    uComments.prototype.ssid = function(isUpdate, cb) {
+
+        var ssid = this.ssid;
+        var sos = this.sos;
+
+        if( isUpdate || !ssid || !sos ) {
+
+        }
+
+        return {ssid: ssid, sos: sos};
+    }
+
+
+
+
+    uComments.prototype.add = function(entry_id, message, pid) {
+
+        if( !entry_id && !message ) return false;
 
         var _this = this;
-        if(!url) return false;
+        var data = {id: entry_id, message: message, ssid: this.object.ssid, sos: this.object.sos};
 
-        allEntries.getAsync(url, function(all) {
-
-            var object = allEntries.parse(all);
-            _this.object = object;
-
-            if( _this.button_update ) {
-
-                var nextSwitchUrl = object.switches[parseInt(object.switches.active)+1];
-                var isSwitch = object.switches.active && nextSwitchUrl;
-
-                _this.button_update.style.display = isSwitch ? '' : 'none';
-                _this.button_update.dataset.switchUrl = isSwitch ? nextSwitchUrl : null;
-            }
-
-            if(_this.container) {
-                printComments.toContainer(object.nodes, _this.container, isPrepend);
-
-            }
-
-            if(_this.switches) {
-                _this.switches.innerHTML = printComments.pages(object);
-            }
-
-            console.log(object);
-        });
-    };
-
-    Comments.prototype.post = function(id, _message, cb) {
-
-        if(!_message.length) return console.log('пустое сообщение');
-
-        var PROTO_THIS = this;
-        var data = {id: id, message: _message, ssid: this.object.ssid, sos: this.object.sos};
-
-        if( this.options.module == 'stuff') {
+        if( this.module == 'stuff' ) {
             data = Gu.extend(data, {a: 36, m: 8});
         }
 
@@ -102,6 +113,80 @@
         });
     };
 
+   // private
+
+    // xhrAsync(['/ghhh',{a:1}], function(){}, function(){});
+   function xhrAsync(array, cb, cbe) {
+
+        var type = array[1] ? 'POST' : 'GET';
+        var request = new XMLHttpRequest();
+
+        request.onerror = function() {
+            if(cbe) cbe.call(this);
+        }
+
+        request.onload = function() {
+            if( this.status === 200 ) cb.call(this, this.responseText); else request.onerror.call(this);
+        };
+
+        request.open(type, array[0], true);
+        request.send(array[1] || null);
+
+        return request;
+   }
+
+
+    var comments = (function() {
+
+
+        var _dS = function(s) {
+            var i, r='', l=s.length-1, k=s.substr(l,1);
+        	for (i = 0; i < l; i++) {
+        		c = s.charCodeAt(i) - k;
+        		if (c < 32) {
+        			c = 127 - (32 - c);
+        		}
+        		r += String.fromCharCode(c);
+        	}
+        	return r;
+        };
+
+        var parseSossid = function(text) {
+
+            // sos
+            var regexp = new RegExp('_dS\(\'(.*?)\'\);', 'i'), input;
+
+            if( regexp.test(text) ) {
+                input = _dS(text.match(regexp)[1]).match(/\d+/g);
+            }
+
+            // ssid
+
+            return input[0] || 0;
+        };
+
+        function parseNodes(html) {
+            html.querySelectorAll('#allEntries > .comEnt');
+        }
+        function parseSwitches(html) {
+            html.querySelectorAll('[class^="swchItem"]');
+        }
+
+        function parseAll(text) {
+
+            var html = parseHTML(text);
+
+            var object = {
+                nodes   : parseNodes(html),
+                switches: parseSwitches(html),
+                sosssid : parseSossid(text)
+            }
+
+            return object;
+        }
+
+        return {parseAll: parseAll};
+    })();
 
     var allEvents = {
 
