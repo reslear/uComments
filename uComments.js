@@ -80,6 +80,7 @@ comm = [
 
     }
 
+    uComments.prototype.postHandler = postHandler;
 
     /* private
     ---------------------------------------------------------------------------------- */
@@ -120,7 +121,7 @@ comm = [
     var postHandler = function(type, user_options) {
 
         const _this = this;
-        const options = extend(POST_VAR.type[type], user_options);
+        const options = extend(POST_VAR.type[type], this.ssid, user_options);
 
         if(!this.result || !this.url) return false;
 
@@ -255,9 +256,16 @@ comm = [
     }
 
 
-    function extend(obj, obj1) {
+    function extend(obj) {
 
-        for( var key in obj1) if( obj1.hasOwnProperty(key) ) obj[key] = obj1[key];
+        for(i=1; i < arguments.length; i++) {
+            var obj1 = arguments[i];
+
+            for( var key in obj1){
+                if( obj1.hasOwnProperty(key) ) obj[key] = obj1[key];
+            }
+        }
+
         return obj;
     }
 
