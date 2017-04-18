@@ -44,9 +44,37 @@ comm = [
 
         this.module = module || 'stuff';
 
+        this.post_cb  = false;
+        this.post_cbe = false;
+
         this.result = {};
         this.url    = '';
     };
+
+    const POST_VAR = {
+        module: {
+            'stuff' : {m: 8},
+            'load' : {m: 5}
+        },
+        add: {
+            a: 36,
+            soc_type: '',
+            data: '',
+        },
+        edit: {
+            a:37,
+            answer: '',
+            t: 1,
+            pending: 0,
+            reply: 0,
+            soc_type:'',
+            sdata:''
+        },
+        remove:{
+            a: 38,
+            as_spam: 0
+        }
+    }
 
 
     /* public
@@ -66,66 +94,30 @@ comm = [
     }
 
 
-    uComments.prototype.add = function(entry_id, message, pid) {
-
-        if(!this.result || !this.url || !message) return false;
-
-        return xhrAsync([url, {}], function(text) {
-
-            _this.url = url;
-            _this.result = parseAll(text);
-
-            if(cb) cb.call(this, _this.result);
-        });
-
+    // syntax suggar
+    uComments.prototype.add = function(entry_id, message) {
+        return postHandler.call(this, {id: entry_id, message: message});
+    }
+    uComments.prototype.addSub = function(comment_id, message) {
+        return postHandler.call(this, {pid: comment_id, message: message});
+    }
+    uComments.prototype.edit = function(comment_id, message, answer) {
+        return postHandler.call(this, {s: comment_id, message: message, answer: answer});
+    }
+    uComments.prototype.remove = function(comment_id) {
+        return postHandler.call(this, {s: comment_id});
     }
 
-    uComments.prototype.postHandler = function() {
-        postHandler.apply(this, arguments);
+    // post
+    uComments.prototype.post = function() {
+        return postHandler.apply(this, arguments);
     }
+
+
+
 
     /* private
     ---------------------------------------------------------------------------------- */
-
-    const POST_VAR = {
-        module: {
-            'stuff' : {m: 8},
-            'load' : {m: 5}
-        },
-        type: {
-            'add': {
-                data: {
-                    a: 36,
-                    soc_type: '',
-                    data: '',
-                },
-                result: {
-                    ok: ''
-                }
-            },
-            'edit': {
-                data: {
-                    a:37,
-                    answer: '',
-                    t: 1,
-                    pending: 0,
-                    reply: 0,
-                    soc_type:'',
-                    sdata:''
-                }
-            },
-            'remove':{
-                data: {
-                    a: 38,
-                    as_spam: 0
-                },
-                result: {
-                    ok: new RegExp()
-                }
-            }
-        },
-
-    }
 
 /*
         postHandler('add', {id: 0, pid: 0, message:''})
@@ -137,21 +129,14 @@ comm = [
     var postHandler = function(type, user_options) {
 
         const _this = this;
-        const options = extend(POST_VAR.type[type].data, POST_VAR.module[this.module], this.result.ssid, user_options);
+        const options = extend(POST_VAR[type], POST_VAR.module[this.module], this.result.ssid, user_options);
 
         if(!this.result || !this.url) return false;
 
         var callback = function(text) {
 
             text = text || '';
-
-            var cb_options = {
-                status: 0,
-                message: '',
-                content: ''
-            };
-
-            // TODO: parse
+            var cb_options = {status: 0,message: '',content: ''};
 
             var xml = this.responseXML;
 
@@ -160,12 +145,30 @@ comm = [
                 return false;
             }
 
-            var message = xml.querySelector('[t="eMessage"]');
-            var content = xml.querySelector('[t="newEntryB"]');
+            var message = xml.querySelector('[p="innerHTML"]');
+            message = message ? message.textContent : '';
+
+            var message_error = message ? /myWinError/.test(message) : false;
 
             if(type == 'add') {
-                cb_options.message = message ? message.textContent : '';
-                cb_options.content = content ? content.textContent : '';
+
+                var content = xml.querySelector('[p="innerHTML+"]');
+
+                cb_options = extend(cb_options, {
+                    status: message && content && !message_error ? 1 : 0,
+                    message: message,
+                    content: content ? content.textContent : ''
+                });
+
+            } else if(type == 'edit') {
+
+                cb_options = extend(cb_options, {
+                    status: message && !message_error && /myWinLoadSD/.test(message) ? 1 : 0,
+                    message: message
+                });
+
+            } else if(type == 'remove') {
+                cb_options.status = /comEnt/.test(text) ? 1 : 0;
             }
 
             if(options.cb) options.cb.call(this, cb_options);
@@ -308,7 +311,7 @@ comm = [
             var obj1 = arguments[i];
 
             for( var key in obj1){
-                if( obj1.hasOwnProperty(key) ) obj[key] = obj1[key];
+                if( obj1[key] && obj1.hasOwnProperty(key) ) obj[key] = obj1[key];
             }
         }
 
