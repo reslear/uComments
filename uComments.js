@@ -80,7 +80,9 @@ comm = [
 
     }
 
-    uComments.prototype.postHandler = postHandler;
+    uComments.prototype.postHandler = function() {
+        postHandler.apply(this, arguments);
+    }
 
     /* private
     ---------------------------------------------------------------------------------- */
@@ -135,7 +137,7 @@ comm = [
             if(options.cb) options.cb.call(this, message, content);
         }
 
-        return xhrAsync([url, options], callback, callback);
+        return xhrAsync([this.url, options], callback, callback);
     };
 
     var parseSsid = function (text) {
@@ -174,6 +176,7 @@ comm = [
 
         var type = array[1] ? 'POST' : 'GET';
         var request = new XMLHttpRequest();
+        var formdata = new FormData();
 
         request.onerror = function() {
             if(cbe) cbe.call(this);
@@ -183,8 +186,14 @@ comm = [
             if( this.status === 200 ) cb.call(this, this.responseText); else request.onerror.call(this);
         };
 
+        if(array[1]) {
+            for(var key in array[1]) {
+                formdata.append(key, array[1][key]);
+            }
+        }
+
         request.open(type, array[0], true);
-        request.send(array[1] || null);
+        request.send(array[1] ? formdata : null);
 
         return request;
     }
@@ -258,7 +267,7 @@ comm = [
 
     function extend(obj) {
 
-        for(i=1; i < arguments.length; i++) {
+        for(var i = 1; i < arguments.length; i++) {
             var obj1 = arguments[i];
 
             for( var key in obj1){
