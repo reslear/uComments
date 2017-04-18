@@ -16,7 +16,7 @@ comments.get('/stuff/45?comments', function( nodes ) {
 
 ---
 только после get:
-
+                            /index/58-140
     comments.add(entry_id, message, pid);
                                                               soc_type:'', sdata:''
     comments.edit(com_id, message);         /index/37-135    s: 135 (id комментари)   a:37, t:1, ssid:'', message: 1, answer:'ответ'   reply (Отправить ответ по e-mail) pending Не выводить комментарий
@@ -89,33 +89,47 @@ comm = [
 
     const POST_VAR = {
         module: {
-            stuff : {m: 8},
-            load : {m: 5}
+            'stuff' : {m: 8},
+            'load' : {m: 5}
         },
         type: {
             'add': {
-                a: 36,
-                soc_type: '',
-                data: '',
+                data: {
+                    a: 36,
+                    soc_type: '',
+                    data: '',
+                },
+                result: {
+                    ok: ''
+                }
             },
             'edit': {
-                a:37,
-                answer: '',
-                t: 1,
-                pending: 0,
-                reply: 0,
-                soc_type:'',
-                sdata:''
+                data: {
+                    a:37,
+                    answer: '',
+                    t: 1,
+                    pending: 0,
+                    reply: 0,
+                    soc_type:'',
+                    sdata:''
+                }
             },
-            'remove': {
-                a: 38,
-                as_spam: 0
+            'remove':{
+                data: {
+                    a: 38,
+                    as_spam: 0
+                },
+                result: {
+                    ok: new RegExp()
+                }
             }
-        }
+        },
+
     }
 
 /*
         postHandler('add', {id: 0, pid: 0, message:''})
+        postHandler('add', {pid: 0, message:''})
         postHandler('edit', {s: 0, message:''})
         postHandler('remove', {s: 0})
 */
@@ -123,21 +137,41 @@ comm = [
     var postHandler = function(type, user_options) {
 
         const _this = this;
-        const options = extend(POST_VAR.type[type], this.ssid, user_options);
+        const options = extend(POST_VAR.type[type].data, POST_VAR.module[this.module], this.result.ssid, user_options);
 
         if(!this.result || !this.url) return false;
 
         var callback = function(text) {
 
+            text = text || '';
+
+            var cb_options = {
+                status: 0,
+                message: '',
+                content: ''
+            };
+
             // TODO: parse
 
-            var message = text;
-            var content = '';
+            var xml = this.responseXML;
 
-            if(options.cb) options.cb.call(this, message, content);
+            if (!xml || !xml.documentElement) {
+                if(options.cbe) options.cbe.call(this);
+                return false;
+            }
+
+            var message = xml.querySelector('[t="eMessage"]');
+            var content = xml.querySelector('[t="newEntryB"]');
+
+            if(type == 'add') {
+                cb_options.message = message ? message.textContent : '';
+                cb_options.content = content ? content.textContent : '';
+            }
+
+            if(options.cb) options.cb.call(this, cb_options);
         }
 
-        return xhrAsync([this.url, options], callback, callback);
+        return xhrAsync(['/index/', options], callback, callback);
     };
 
     var parseSsid = function (text) {
@@ -174,9 +208,11 @@ comm = [
 
         if(!array[0]) return false;
 
-        var type = array[1] ? 'POST' : 'GET';
-        var request = new XMLHttpRequest();
+        var data = array[1];
         var formdata = new FormData();
+
+        var type = data ? 'POST' : 'GET';
+        var request = new XMLHttpRequest();
 
         request.onerror = function() {
             if(cbe) cbe.call(this);
@@ -186,14 +222,15 @@ comm = [
             if( this.status === 200 ) cb.call(this, this.responseText); else request.onerror.call(this);
         };
 
-        if(array[1]) {
-            for(var key in array[1]) {
-                formdata.append(key, array[1][key]);
+        if( data ) {
+            for(var key in data) {
+                if( !data.hasOwnProperty(key) ) continue;
+                formdata.append(key, data[key]);
             }
         }
 
         request.open(type, array[0], true);
-        request.send(array[1] ? formdata : null);
+        request.send( data ? formdata : '');
 
         return request;
     }
