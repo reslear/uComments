@@ -1,22 +1,73 @@
 # uComments
 
-class для простой и удобной работы с комментариями в системе uCoz
-___
-- **Парсинг** - получение вида комментариев, переключателей в Object.
+инструмент для простой и удобной работы с комментариями в системе uCoz
+- **Парсинг** - получение вида комментариев, переключателей, ssid и sos в виде Object.
 - **Пост** - добавление, добавление ответов, редактирование и удаление комментариев.
-___
+
+Представляет собой схожий на API - набор методов и переменных, для упрощённого использования в других скриптах, не имеет визуальной оболочки как и взаимодействия с элементами и их событиями на странице.
+
+Прямое предназначение в виде основы ваших скриптов используемых комментарии как основу хранения данных.
+
+![](https://reslear.github.io/img/ucomments-p1.png)
+
+Так например можно создать скрипт "Персональной стены профиля", "Чат", "Собственный вид комментариев", "Комментарии для статических страниц" и т.д.
+
+Выполнен в виде конструктора, что позволяет управлять на одной странице сразу множеством комментариев разных модулей или страниц, без конфликтов.
+
+Пример разработки - вы подключаете данный скрипт используя методы и переменные пишете свой скрипт оболочку , привязывая события кнопкам добавления или редакирования, выводя в нужном вам формате и сортировке отдельные комментарии.
+
+### Поддержка
+- модуль «Каталог файлов»
+- модуль «Онлайн Игры»
+
+
+- Только локальные комменарии, т.е. пока нет поддержки «Социальные комментарии»
+
+### Быстрый старт
+
 
 ```javascript
-<link rel="stylesheet" href="//upost.su/u/css/new.year.min.css">
-<script src="//upost.su/u/js/newyear.v1.reslear.upost.su.min.js"></script>
-<script>newYear.init();</script>
+var content = document.querySelector('#all-comments'); // место вставки комментариев
+var comments = new uComments('stuff'); // переменная для последущей работы с классом
+
+// Пример 1: Получение и вывод комментариев
+comments.get('/stuff/13', function(nodes) {
+	/*  пимерный результат - 
+    142: { index: 2, level: 0, node: '<div...' }, 
+    150: { index: 3, level: 1, node: '<div...' }, ... */
+    
+    for( var id in nodes) {
+    	var item = nodes[id].node;
+        node.style.marginLeft = (item.level * 20) + 'px';
+        
+    	content.appendChild(item.node);
+    }
+});
+
+// Пример 2: Добавление комментария
+comments.add(13, 'Сообщение', function(result) {
+   if(result.status) content.appendChild(result.content);
+});
+
+// Пример 3: Удаление комментария
+var remove_id = 142;
+var remove_el = document.querySelector('#comEnt' + remove_id);
+
+comments.add(remove_id, function(result) {
+   if(result.status) content.removeChild(remove_el);
+});
 ```
 
 
 
-### параметры:
 
- * [markdown-it](https://github.com/markdown-it/markdown-it) for Markdown parsing
- * [CodeMirror](http://codemirror.net/) for the awesome syntax-highlighted editor
- * [highlight.js](http://softwaremaniacs.org/soft/highlight/en/) for syntax highlighting in output code blocks
- * [js-deflate](https://github.com/dankogai/js-deflate) for gzipping of data to make it fit in URLs
+
+### Методы:
+-
+### Переменные:
+
+-
+
+### Внесли вклад:
+
+-
