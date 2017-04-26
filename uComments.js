@@ -241,7 +241,7 @@ comm = [
 
     // Парсинг комментариев
     function _dS(s) {
-        var i, r='', l=s.length-1, k=s.substr(l,1);
+        var i, c, r='', l=s.length-1, k=s.substr(l,1);
     	for (i = 0; i < l; i++) {
     		c = s.charCodeAt(i) - k;
     		if (c < 32) {
