@@ -95,14 +95,14 @@ comm = [
 
 
     // syntax suggar
-    uComments.prototype.add = function(entry_id, message) {
-        return postHandler.call(this, {id: entry_id, message: message});
+    uComments.prototype.add = function(entry_id, message, cb) {
+        return postHandler.call(this, {id: entry_id, message: message, cb: cb});
     }
-    uComments.prototype.addSub = function(comment_id, message) {
-        return postHandler.call(this, {pid: comment_id, message: message});
+    uComments.prototype.addSub = function(comment_id, message, cb) {
+        return postHandler.call(this, {pid: comment_id, message: message, cb: cb});
     }
-    uComments.prototype.edit = function(comment_id, message, answer) {
-        return postHandler.call(this, {s: comment_id, message: message, answer: answer});
+    uComments.prototype.edit = function(comment_id, message, answer, cb) {
+        return postHandler.call(this, {s: comment_id, message: message, answer: answer, cb: cb});
     }
     uComments.prototype.remove = function(comment_id) {
         return postHandler.call(this, {s: comment_id});
