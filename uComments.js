@@ -95,20 +95,20 @@ comm = [
 
 
     // syntax suggar
-    uComments.prototype.add = function(entry_id, message, cb) {
-        return postHandler.call(this, 'add', {id: entry_id, message: message, cb: cb});
+    uComments.prototype.add = function(entry_id, message, cb, cbe) {
+        return postHandler.call(this, 'add', {id: entry_id, message: message, cb: cb, cbe: cbe});
     };
 
-    uComments.prototype.addSub = function(comment_id, message, cb) {
-        return postHandler.call(this, 'add', {pid: comment_id, message: message, cb: cb});
+    uComments.prototype.addSub = function(comment_id, message, cb, cbe) {
+        return postHandler.call(this, 'add', {pid: comment_id, message: message, cb: cb, cbe: cbe});
     };
 
-    uComments.prototype.edit = function(comment_id, message, answer, cb) {
-        return postHandler.call(this, 'edit', {s: comment_id, message: message, answer: answer, cb: cb});
+    uComments.prototype.edit = function(comment_id, message, answer, cb, cbe) {
+        return postHandler.call(this, 'edit', {s: comment_id, message: message, answer: answer, cb: cb, cbe: cbe});
     };
 
-    uComments.prototype.remove = function(comment_id, cb) {
-        return postHandler.call(this, 'remove', {s: comment_id, cb: cb});
+    uComments.prototype.remove = function(comment_id, cb, cbe) {
+        return postHandler.call(this, 'remove', {s: comment_id, cb: cb, cbe: cbe});
     };
 
     // post
