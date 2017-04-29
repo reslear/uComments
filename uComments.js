@@ -181,6 +181,7 @@ comm = [
             }
 
             if(options.cb) options.cb.call(this, cb_options);
+            if(options.cbe && cb_options.status === 0) options.cbe.call(this);
         };
 
         return xhrAsync(['/index/', options], callback, callback);
