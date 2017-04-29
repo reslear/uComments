@@ -51,7 +51,7 @@ comm = [
         this.url    = '';
     };
 
-    const POST_VAR = {
+    var POST_VAR = {
         module: {
             'stuff' : {m: 8},
             'load' : {m: 5}
@@ -74,7 +74,7 @@ comm = [
             a: 38,
             as_spam: 0
         }
-    }
+    };
 
 
     /* public
@@ -91,27 +91,30 @@ comm = [
 
             if(cb) cb.call(this, _this.result);
         }, cbe || null);
-    }
+    };
 
 
     // syntax suggar
     uComments.prototype.add = function(entry_id, message, cb) {
-        return postHandler.call(this, {id: entry_id, message: message, cb: cb});
-    }
+        return postHandler.call(this, 'add', {id: entry_id, message: message, cb: cb});
+    };
+
     uComments.prototype.addSub = function(comment_id, message, cb) {
-        return postHandler.call(this, {pid: comment_id, message: message, cb: cb});
-    }
+        return postHandler.call(this, 'add', {pid: comment_id, message: message, cb: cb});
+    };
+
     uComments.prototype.edit = function(comment_id, message, answer, cb) {
-        return postHandler.call(this, {s: comment_id, message: message, answer: answer, cb: cb});
-    }
-    uComments.prototype.remove = function(comment_id) {
-        return postHandler.call(this, {s: comment_id});
-    }
+        return postHandler.call(this, 'edit', {s: comment_id, message: message, answer: answer, cb: cb});
+    };
+
+    uComments.prototype.remove = function(comment_id, cb) {
+        return postHandler.call(this, 'remove', {s: comment_id, cb: cb});
+    };
 
     // post
     uComments.prototype.post = function() {
         return postHandler.apply(this, arguments);
-    }
+    };
 
 
 
@@ -128,8 +131,8 @@ comm = [
 
     var postHandler = function(type, user_options) {
 
-        const _this = this;
-        const options = extend(POST_VAR[type], POST_VAR.module[this.module], this.result.ssid, user_options);
+        var _this = this;
+        var options = extend(POST_VAR[type], POST_VAR.module[this.module], this.result.ssid, user_options);
 
         if(!this.result || !this.url) return false;
 
@@ -153,11 +156,17 @@ comm = [
             if(type == 'add') {
 
                 var content = xml.querySelector('[p="innerHTML+"]');
+                var status = message && content && !message_error ? 1 : 0;
+
+                if( content ) {
+                    var nodesObject = parseNodes( toNode(content.textContent, 1) );
+                    content = nodesObject[Object.keys(nodesObject)[0]];
+                }
 
                 cb_options = extend(cb_options, {
-                    status: message && content && !message_error ? 1 : 0,
+                    status: status,
                     message: message,
-                    content: content ? content.textContent : ''
+                    content: content ? content.node : 0
                 });
 
             } else if(type == 'edit') {
@@ -172,7 +181,7 @@ comm = [
             }
 
             if(options.cb) options.cb.call(this, cb_options);
-        }
+        };
 
         return xhrAsync(['/index/', options], callback, callback);
     };
@@ -193,18 +202,24 @@ comm = [
 
     var parseAll = function(text) {
 
-        var html = document.createElement('html');
-        html.innerHTML = text;
+        var html = toNode(text, 1);
 
         var object = {
             nodes: parseNodes(html),
             swtch: parseSwtch(html),
             ssid : parseSsid(text)
-        }
+        };
 
         return object;
-    }
+    };
 
+    function toNode(text, isFull) {
+
+        var html = document.createElement('html');
+        html.innerHTML = text;
+
+        return isFull === undefined ? html.querySelector('body').firstChild : html;
+    }
 
     // xhrAsync(['/ghhh',{a:1}], function(){}, function(){});
     function xhrAsync(array, cb, cbe) {
@@ -219,7 +234,7 @@ comm = [
 
         request.onerror = function() {
             if(cbe) cbe.call(this);
-        }
+        };
 
         request.onload = function() {
             if( this.status === 200 ) cb.call(this, this.responseText); else request.onerror.call(this);
@@ -250,10 +265,10 @@ comm = [
     		r += String.fromCharCode(c);
     	}
     	return r;
-    };
+    }
 
     function parseNodes(html) {
-        var nodes = html.querySelectorAll('#allEntries > .comEnt'), object = {};
+        var nodes = html.querySelectorAll('[id^="comEnt"]'), object = {};
 
         for(var index in nodes) {
 
@@ -264,10 +279,10 @@ comm = [
             var level = parseInt(node.style.marginLeft || 0) / 20;
 
             object[id] = {node: node.firstChild, level: level, index: parseInt(index) };
-        };
+        }
 
         return object;
-    };
+    }
 
     function parseSwtch(html) {
         var nodes = html.querySelectorAll('[class^="swchItem"]'), object = {};
