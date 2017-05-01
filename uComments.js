@@ -96,19 +96,19 @@ comm = [
 
     // syntax suggar
     uComments.prototype.add = function(entry_id, message, cb, cbe) {
-        return postHandler.call(this, 'add', {id: entry_id, message: message, cb: cb, cbe: cbe});
+        return postHandler.call(this, 'add', {id: entry_id, message: message}, cb, cbe);
     };
 
     uComments.prototype.addSub = function(comment_id, message, cb, cbe) {
-        return postHandler.call(this, 'add', {pid: comment_id, message: message, cb: cb, cbe: cbe});
+        return postHandler.call(this, 'add', {pid: comment_id, message: message}, cb, cbe);
     };
 
     uComments.prototype.edit = function(comment_id, message, answer, cb, cbe) {
-        return postHandler.call(this, 'edit', {s: comment_id, message: message, answer: answer, cb: cb, cbe: cbe});
+        return postHandler.call(this, 'edit', {s: comment_id, message: message, answer: answer}, cb, cbe);
     };
 
     uComments.prototype.remove = function(comment_id, cb, cbe) {
-        return postHandler.call(this, 'remove', {s: comment_id, cb: cb, cbe: cbe});
+        return postHandler.call(this, 'remove', {s: comment_id}, cb, cbe);
     };
 
     // post
@@ -129,7 +129,7 @@ comm = [
         postHandler('remove', {s: 0})
 */
 
-    var postHandler = function(type, user_options) {
+    var postHandler = function(type, user_options, cb, cbe) {
 
         var _this = this;
         var options = extend(POST_VAR[type], POST_VAR.module[this.module], this.result.ssid, user_options);
@@ -144,7 +144,7 @@ comm = [
             var xml = this.responseXML;
 
             if (!xml || !xml.documentElement) {
-                if(options.cbe) options.cbe.call(this);
+                if(cbe) cbe.call(this);
                 return false;
             }
 
@@ -180,8 +180,8 @@ comm = [
                 cb_options.status = /comEnt/.test(text) ? 1 : 0;
             }
 
-            if(options.cb) options.cb.call(this, cb_options);
-            if(options.cbe && cb_options.status === 0) options.cbe.call(this);
+            if(cb && cb_options.status === 1) cb.call(this, cb_options);
+            if(cbe && cb_options.status === 0) cbe.call(this);
         };
 
         return xhrAsync(['/index/', options], callback, callback);
@@ -268,22 +268,50 @@ comm = [
     	return r;
     }
 
-    function parseNodes(html) {
+    function parentToFragment(parent) {
+
+        var fragment = document.createDocumentFragment();
+        var clonedParent = parent.cloneNode(true);
+
+        while(clonedParent.firstChild) fragment.appendChild(clonedParent.firstChild);
+        return fragment;
+    }
+
+    function parseDataAttributes(element) {
+
+        if(!element || !element.dataset) return false;
+        var array = ['rating', 'level'], object = {};
+
+        for(var i =0;i<array.length;i++) {
+            var item = array[i];
+            if(element.dataset[item]) object[item] = element.dataset[item];
+        }
+
+        return object;
+    }
+
+    var parseNodes = function(html) {
         var nodes = html.querySelectorAll('[id^="comEnt"]'), object = {};
 
         for(var index in nodes) {
 
             if( !nodes.hasOwnProperty(index) ) continue;
-            var node = nodes[index];
+            var node = nodes[index], element = {};
 
-            var id = node.getAttribute('id').replace('comEnt', '');
-            var level = parseInt(node.style.marginLeft || 0) / 20;
+            element.id = node.getAttribute('id').replace('comEnt', '');
+            element.level = parseInt(node.style.marginLeft || 0) / 20;
 
-            object[id] = {node: node.firstChild, level: level, index: parseInt(index) };
+            element.node = parentToFragment(node);
+            element.index = parseInt(index);
+
+            var dataElement = element.node.querySelector('#ucomments-comment');
+            var dataElementSet = dataElement ? (parseDataAttributes(dataElement) || {}) : {};
+
+            object[element.id] = extend(dataElementSet, element);
         }
 
         return object;
-    }
+    };
 
     function parseSwtch(html) {
         var nodes = html.querySelectorAll('[class^="swchItem"]'), object = {};
@@ -326,12 +354,16 @@ comm = [
         for(var i = 1; i < arguments.length; i++) {
             var obj1 = arguments[i];
 
-            for( var key in obj1){
-                if( obj1[key] && obj1.hasOwnProperty(key) ) obj[key] = obj1[key];
+            for( var key in obj1) {
+                if( obj1[key] !== undefined && obj1.hasOwnProperty(key) ) obj[key] = obj1[key];
             }
         }
 
         return obj;
+    }
+
+    function lastObjectValue(obj) {
+        return obj[Object.keys(obj)[Object.keys(obj).length - 1]];
     }
 
 })();
