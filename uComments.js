@@ -22,18 +22,6 @@ comments.get('/stuff/45?comments', function( nodes ) {
     comments.edit(com_id, message);         /index/37-135    s: 135 (id комментари)   a:37, t:1, ssid:'', message: 1, answer:'ответ'   reply (Отправить ответ по e-mail) pending Не выводить комментарий
     comments.remove(com_id);       ssid:'8LIde8BO',a:'38',s:id,as_spam:(as_spam?1:0)
 
-comments.update();
-
-
-nodes = [
-    {node: node, id: 7, level: 2}
-]
-
-comm = [
-    {value: '', link: '', active: ''},
-    {value: '', link: '', active: ''},
-]
-
 */
 
 (function() {
@@ -47,7 +35,10 @@ comm = [
         this.post_cb  = false;
         this.post_cbe = false;
 
-        this.result = {};
+        this.result = {
+            nodes: 0
+        };
+
         this.url    = '';
     };
 
@@ -80,6 +71,17 @@ comm = [
     /* public
     ---------------------------------------------------------------------------------- */
 
+    // init get and local
+    uComments.prototype.local = function(element, cb) {
+
+        if(!element) return false;
+
+        this.result = parseAll(element);
+        var resultArg = this.result ? extend({}, this.result) : false;
+
+        if(cb) cb.call(this, resultArg);
+    };
+
     // get
     uComments.prototype.get = function(url, cb, cbe) {
 
@@ -89,7 +91,9 @@ comm = [
             _this.url = url;
             _this.result = parseAll(text);
 
-            if(cb) cb.call(this, _this.result);
+            var resultArg = _this.result ? extend({}, _this.result) : false;
+
+            if(cb) cb.call(_this, resultArg);
         }, cbe || null);
     };
 
@@ -116,11 +120,50 @@ comm = [
         return postHandler.apply(this, arguments);
     };
 
+    // utils
+    uComments.prototype.extend = extend;
+    uComments.prototype.isObject = isObject;
 
-
+    uComments.prototype.printNodes = function(isChilds, userNodes) {
+        var nodes = userNodes || this.result.nodes;
+        return printNodes(nodes, isChilds);
+    };
 
     /* private
     ---------------------------------------------------------------------------------- */
+
+    var printNodes = function(nodes, isChilds) {
+
+        if( !nodes || !Array.isArray(nodes) || !nodes.length ) return false;
+        var fragment = document.createDocumentFragment();
+
+        var each_cb = function(item) {
+
+    		if(!item.node) return;
+
+            // добавляем сам элемент
+            fragment.appendChild(item.node.cloneNode(true));
+
+            // добавляем зону для добавления комментариев
+            if(item.id && item.level) {
+        		var appEntry = document.createElement('div');
+
+        		appEntry.id = 'appEntry' + item.id;
+        		appEntry.style = 'margin-left:'+ (item.level * 20 + 20) +'px';
+
+        		fragment.appendChild(appEntry);
+            }
+
+            // добавлем потомков
+    		if(isChilds && item.childs.length) {
+                var childsNode = printNodes(item.childs);
+                if(childsNode) fragment.appendChild(childsNode);
+            }
+    	};
+
+        nodes.forEach(each_cb);
+    	return fragment;
+    };
 
 /*
         postHandler('add', {id: 0, pid: 0, message:''})
@@ -187,31 +230,28 @@ comm = [
         return xhrAsync(['/index/', options], callback, callback);
     };
 
-    var parseSsid = function (text) {
+    var parseSsid = function(text) {
+        var sos = 0, ssid = 0;
 
-        // sos
-        var regexp_sos = new RegExp('_dS\\(\'(.*?)\'\\);', 'i');
-        var sos = regexp_sos.test(text) ? _dS(text.match(regexp_sos)[1]) : '';
-        sos = /\d+/.test(sos) ? sos.match(/\d+/)[0] : '';
+        if( text.nodeType ) {
+            var inp_ssid = document.querySelector('input[name=ssid]');
+            var inp_sos = document.querySelector('input[name=sos]');
 
-        // ssid
-        var regexp_ssid = new RegExp('name="ssid"\\svalue="(.*?)"', '');
-        var ssid = regexp_ssid.test(text) ? text.match(regexp_ssid)[1] : '';
+            if(inp_ssid) ssid = inp_ssid.value;
+            if(inp_sos) sos = inp_sos.value;
+        } else {
+
+            // sos
+            var regexp_sos = new RegExp('_dS\\(\'(.*?)\'\\);', 'i');
+            sos = regexp_sos.test(text) ? _dS(text.match(regexp_sos)[1]) : '';
+            sos = /\d+/.test(sos) ? sos.match(/\d+/)[0] : '';
+
+            // ssid
+            var regexp_ssid = new RegExp('name="ssid"\\svalue="(.*?)"', '');
+            ssid = regexp_ssid.test(text) ? text.match(regexp_ssid)[1] : '';
+        }
 
         return {sos: sos, ssid: ssid};
-    };
-
-    var parseAll = function(text) {
-
-        var html = toNode(text, 1);
-
-        var object = {
-            nodes: parseNodes(html),
-            swtch: parseSwtch(html),
-            ssid : parseSsid(text)
-        };
-
-        return object;
     };
 
     function toNode(text, isFull) {
@@ -290,30 +330,64 @@ comm = [
         return object;
     }
 
-    var parseNodes = function(html) {
-        var nodes = html.querySelectorAll('[id^="comEnt"]'), object = {};
+    var parseAll = function(text) {
 
-        for(var index in nodes) {
+        var html = text.nodeType ? text : toNode(text, true);
 
-            if( !nodes.hasOwnProperty(index) ) continue;
-            var node = nodes[index], element = {};
-
-            element.id = node.getAttribute('id').replace('comEnt', '');
-            element.level = parseInt(node.style.marginLeft || 0) / 20;
-
-            element.node = parentToFragment(node);
-            element.index = parseInt(index);
-
-            var dataElement = element.node.querySelector('#ucomments-comment');
-            var dataElementSet = dataElement ? (parseDataAttributes(dataElement) || {}) : {};
-
-            object[element.id] = extend(dataElementSet, element);
-        }
+        var object = {
+            nodes: parseNodes(html),
+            swtch: parseSwtch(html),
+            ssid : parseSsid(text)
+        };
 
         return object;
     };
 
+    var parseNodes = function(html) {
+
+        var nodes = html.querySelectorAll('[id^="comEnt"]');
+        var array = [];
+
+        for(var index in nodes) {
+
+            if( !nodes.hasOwnProperty(index) ) continue;
+            var node = nodes[index].cloneNode(true), element = {};
+
+            element.id = node.getAttribute('id').replace('comEnt', '');
+        	element.level = parseInt(node.style.marginLeft || 0) / 20;
+
+            //node.removeAttribute('class');
+        	//node.removeAttribute('style');
+
+        	var last = array[array.length-1];
+            var dataElement = node.querySelector('#ucomments-comment');
+
+            var dataElementSet = parseDataAttributes(dataElement) || {};
+            element = extend(dataElementSet, {node: node, index: parseInt(index), childs: []}, element);
+
+            if(element.level === 0) {
+                array.push(element);
+            } else if(last){
+                last.childs.push(element);
+            }
+
+        }
+
+        return array;
+    };
+
+    /*
+    array.forEach(function(item, i) {
+       if(item.level === 0) {
+          arrayFamily.push(item);
+       } else {
+          arrayFamily[arrayFamily.length-1].childs.push(item);
+       }
+    });
+    */
+
     function parseSwtch(html) {
+
         var nodes = html.querySelectorAll('[class^="swchItem"]'), object = {};
 
         var regexp_id = new RegExp('\\d+','');
@@ -348,22 +422,25 @@ comm = [
         return object;
     }
 
+    function isObject(value) {
+        return Object(value) === value && !Array.isArray(value);
+    }
 
     function extend(obj) {
 
         for(var i = 1; i < arguments.length; i++) {
+
             var obj1 = arguments[i];
+            if(!isObject(obj1)) continue;
 
             for( var key in obj1) {
-                if( obj1[key] !== undefined && obj1.hasOwnProperty(key) ) obj[key] = obj1[key];
+                if( obj1[key] !== undefined && obj1.hasOwnProperty(key) ) {
+                    obj[key] = isObject(obj[key]) && isObject(obj1[key]) ? extend(obj[key], obj1[key]) : obj1[key];
+                }
             }
         }
 
         return obj;
-    }
-
-    function lastObjectValue(obj) {
-        return obj[Object.keys(obj)[Object.keys(obj).length - 1]];
     }
 
 })();
